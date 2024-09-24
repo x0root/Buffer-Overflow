@@ -10,11 +10,11 @@ def display_banner():
 
 def inject_command(command):
     try:
-        print(f"Injecting command: {command}")
+        print("Injecting command: {}".format(command))
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
         return result.stdout.strip()
     except Exception as e:
-        return f"Failed to execute injected command: {e}"
+        return "Failed to execute injected command: {}".format(e)
 
 if __name__ == "__main__":
     display_banner()
